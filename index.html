@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>image to ascii</title>
+	<script src="js/xdd.js" defer></script>
+</head>
+<body>
+    <header>
+        <h1>Ascii Art Converter</h1>
+        <p>Upload a picture and turn it into pure ASCII masterpiece!</p>
+    </header>
+
+    <button id="contrast">Contrast</button>
+    <button id="export">Export</button>
+    <input type="file" name="picture" accept="image/*"/>
+    <canvas id="preview"></canvas>
+    <!-- <pre id="ascii"></pre> -->
+     <textarea id="ascii" style="height:620px; width: 100%; font-family:monospace; resize:both" wrap="off" readonly></textarea>
+
+    <footer>
+        <p><a href="#">How does it works?</a> &bull; <a href="#">Source code (GitHub)</a></p>
+    </footer>
+</body>
+</html>
