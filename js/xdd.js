@@ -1,12 +1,48 @@
 const imageFile = document.getElementsByName('picture')[0];
+const charSetSelect = document.getElementById('char-set');
 const preview = document.getElementById('preview');
 const canvas = preview.getContext('2d');
+const previewWithFilters = document.getElementById('previewWithFilters');
+const canvasWithFilters = previewWithFilters.getContext('2d');
+const maxWidthInput = document.getElementById('max-width');
+const maxHeightInput = document.getElementById('max-height');
 const asciiImage = document.getElementById('ascii');
-const buttonContrast = document.querySelector('button#contrast');
+const contrastInput = document.getElementById('contrast');
+const contrastValue = document.getElementById('contrast-value');
 const buttonExport = document.querySelector('button#export');
+const posterzieInput = document.querySelector('input#posterize');
+const posterizeValue = document.querySelector('#posterize-value');
 let width = 40;
 let height = 40;
-const loadedimg = new Image(width, height);
+const ASCII_CHARS = ['@', '#', 'S', '%', '?', '*', '+', ';', ':', ',', '.'];
+const PRINTABLE_CHARS = ["$", "@", "B", "%", "8", "&", "W", "M", "#", "*", "o", "a", "h", "k", "b", "d", "p", "q", "w", "m", "Z", "O", "0", "Q", "L", "C", "J", "U", "Y", "X", "z", "c", "v", "u", "n", "x", "r", "j", "f", "t", "/", "|", "(", ")", "1", "{", "}", "[", "]", "?", "-", "_", "+", "~", "<", ">", "i", "!", "l", "I", ";", ":", ",", "\"", "^", "`", "'", ".", " "];
+const BRAILE_CHARS = ["⠿", "⠾", "⠽", "⠼", "⠻", "⠺", "⠹", "⠸", "⠷", "⠶", "⠵", "⠴", "⠳", "⠲", "⠱", "⠰", "⠯", "⠮", "⠭", "⠬", "⠫", "⠪", "⠩", "⠨", "⠧", "⠦", "⠥", "⠤", "⠣", "⠢", "⠡", "⠠", "⠟", "⠞", "⠝", "⠜", "⠛", "⠚", "⠙", "⠘", "⠗", "⠖", "⠕", "⠔", "⠓", "⠒", "⠑", "⠐", "⠏", "⠎", "⠍", "⠌", "⠋", "⠊", "⠉", "⠈", "⠇", "⠆", "⠅", "⠄", "⠃", "⠂", "⠁", "⠀"];
+const loadedimg = new Image();
+function getSelectedCharSet() {
+    switch (charSetSelect.value) {
+        case 'basic':
+            return ASCII_CHARS;
+        case 'printable':
+            return PRINTABLE_CHARS;
+        case 'bas':
+            return BRAILE_CHARS;
+        default:
+            return BRAILE_CHARS;
+    }
+}
+contrastInput.addEventListener('input', () => {
+    contrastValue.textContent = `${contrastInput.value}%`;
+    setTimeout(() => {
+        applyFilters();
+    }, 100);
+});
+posterzieInput.addEventListener('input', () => {
+    console.log(posterizeValue, posterzieInput);
+    posterizeValue.textContent = `${posterzieInput.value}`;
+    setTimeout(() => {
+        applyFilters();
+    }, 100);
+});
 imageFile.onchange = (e) => {
     const fileReader = new FileReader();
     let file = e.currentTarget.files[0];
@@ -17,55 +53,86 @@ imageFile.onchange = (e) => {
     fileReader.onload = (fileReaderEvent) => {
         loadedimg.src = fileReaderEvent.target.result;
         loadedimg.onload = () => {
-            preview.width = width;
-            preview.height = height;
-            canvas.filter = 'grayscale(1)';
-            canvas.drawImage(loadedimg, 0, 0, width, height);
+            preview.width = 200;
+            preview.height = 200;
+            // const contrast = parseInt(contrastInput.value) / 100;
+            previewWithFilters.width = 200;
+            previewWithFilters.height = 200;
+            canvasWithFilters.filter = 'grayscale(1)';
+            canvas.drawImage(loadedimg, 0, 0, 200, 200);
+            canvasWithFilters.drawImage(loadedimg, 0, 0, 200, 200);
         };
     };
 };
-buttonContrast.onclick = (e) => {
-    console.log(e);
-    let contrasted = contrastImage(canvas.getImageData(0, 0, width, height), -50);
-    console.log(contrasted);
-    canvas.putImageData(contrasted, 0, 0);
-};
 buttonExport.onclick = () => { exportToAscii(); };
-function contrastImage(imgData, contrast) {
-    var d = imgData.data;
-    console.log(imgData);
-    contrast = (contrast / 100) + 1; //convert to decimal & shift range: [0..2]
-    var intercept = 128 * (1 - contrast);
-    for (var i = 0; i < d.length; i += 4) { //r,g,b,a
+function contrastImage(rendContext, contrast) {
+    let xdd = rendContext.getImageData(0, 0, 200, 200);
+    let d = xdd.data;
+    contrast = (contrast / 100); //convert to decimal & shift range: [0..2]
+    // debugger
+    let intercept = 128 * (1 - contrast);
+    for (let i = 0; i < d.length; i += 4) { //r,g,b,a
         d[i] = d[i] * contrast + intercept;
         d[i + 1] = d[i + 1] * contrast + intercept;
         d[i + 2] = d[i + 2] * contrast + intercept;
     }
-    return imgData;
+    return xdd;
 }
 function exportToAscii() {
-    let imgData = canvas.getImageData(0, 0, width, height);
-    let d = imgData.data;
-    let lightnessMap = new Array;
-    for (var i = 0; i < d.length; i += 4) { //r,g,b,a
-        lightnessMap.push(d[i]);
+    const aspectRatio = loadedimg.width / loadedimg.height;
+    const maxWidth = parseInt(maxWidthInput.value);
+    const maxHeight = parseInt(maxHeightInput.value);
+    console.log('ascpet', aspectRatio);
+    let width = maxWidth;
+    let height = Math.round(width / aspectRatio);
+    if (height > maxHeight) {
+        height = maxHeight;
+        width = Math.round(height * aspectRatio);
     }
-    console.log(lightnessMap);
-    drawAscii(lightnessMap, width);
+    const tempCanvas = new OffscreenCanvas(width, height);
+    const tempCtx = tempCanvas.getContext("2d");
+    tempCtx.drawImage(previewWithFilters, 0, 0, width, height);
+    let preparedImageDAta = new Array;
+    let tempCanvasData = tempCtx.getImageData(0, 0, width, height).data;
+    for (var i = 0; i < tempCanvasData.length; i += 4) { //r,g,b,a
+        preparedImageDAta.push(tempCanvasData[i]);
+    }
+    const charSet = getSelectedCharSet();
+    drawAscii(preparedImageDAta, width, charSet);
 }
-const grayRamp = '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,"^`\'. ';
-const brailleRamp = ['⠀', '⠮', '⠐', '⠼', '⠫', '⠩', '⠯', '⠄', '⠷', '⠾', '⠡', '⠬', '⠠', '⠤', '⠨', '⠌', '⠴', '⠂', '⠆', '⠒', '⠲', '⠢',
-    '⠖', '⠶', '⠦', '⠔', '⠱', '⠰', '⠣', '⠿', '⠜', '⠹', '⠈', '⠁', '⠃', '⠉', '⠙', '⠑', '⠋', '⠛', '⠓', '⠊', '⠚', '⠅',
-    '⠇', '⠍', '⠝', '⠕', '⠏', '⠟', '⠗', '⠎', '⠞', '⠥', '⠧', '⠺', '⠭', '⠽', '⠵', '⠪', '⠳', '⠻', '⠘', '⠸'];
 const getCharacterForGrayScale = (grayScale, ramp) => ramp[Math.ceil((ramp.length - 1) * grayScale / 255)];
-const drawAscii = (grayScales, width, isReversed) => {
+const drawAscii = (grayScales, width, charSet) => {
+    asciiImage.textContent = '';
     const ascii = grayScales.reduce((asciiImage, grayScale, index) => {
-        // let nextChars = getCharacterForGrayScale(grayScale, grayRamp);
-        let nextChars = getCharacterForGrayScale(grayScale, brailleRamp);
+        let nextChars = getCharacterForGrayScale(grayScale, charSet);
         if ((index + 1) % width === 0) {
             nextChars += '\n';
         }
         return asciiImage + nextChars;
     }, '');
     asciiImage.textContent = ascii;
+};
+const tempCanvas = new OffscreenCanvas(200, 200);
+const tempCtx = tempCanvas.getContext("2d", { willReadFrequently: true });
+const applyFilters = () => {
+    const contrast = parseInt(contrastInput.value);
+    tempCtx.drawImage(preview, 0, 0, 200, 200);
+    let modifed = contrastImage(tempCtx, contrast);
+    modifed = posterize(modifed, [posterzieInput.value, posterzieInput.value, posterzieInput.value]);
+    tempCtx.putImageData(modifed, 0, 0);
+    // tempCtx.filter = 'grayscale(1)';
+    // console.log(tempCtx);
+    // console.log(contrastImage(tempCtx, contrast));
+    canvasWithFilters.putImageData(tempCtx.getImageData(0, 0, 200, 200), 0, 0);
+    canvasWithFilters.filter = 'grayscale(1)';
+};
+const posterize = (rendContext, value) => {
+    console.log(rendContext);
+    let d = rendContext.data;
+    for (var i = 0; i < d.length; i += 4) { //r,g,b,a
+        d[i] = (value[0] === 0 ? 0 : Math.floor(Math.floor(d[i] / 255 * value[0]) * 255 / value[0]));
+        d[i + 1] = (value[1] === 0 ? 0 : Math.floor(Math.floor(d[i + 1] / 255 * value[1]) * 255 / value[1]));
+        d[i + 2] = (value[2] === 0 ? 0 : Math.floor(Math.floor(d[i + 2] / 255 * value[2]) * 255 / value[2]));
+    }
+    return rendContext;
 };
